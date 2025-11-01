@@ -1,30 +1,25 @@
-import os
 import telebot
+from flask import Flask, request
 
-import os
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-bot = telebot.TeleBot(BOT_TOKEN, parse_mode='HTML')
+BOT_TOKEN = "YOUR_TOKEN_HERE"
+bot = telebot.TeleBot(BOT_TOKEN)
+
+app = Flask(__name__)
 
 @bot.message_handler(commands=['start'])
-def start(message):
-    bot.reply_to(
-        message,
-        "👋 Welcome!\n\nSend /get <file_id> to receive your file.\n\nExample:\n/get BAACAgQAAxkBAA..."
-    )
+def start(msg):
+    bot.reply_to(msg, "Bot is running ✅")
 
-@bot.message_handler(commands=['get'])
-def get_file(message):
-    parts = message.text.split(" ")
-    if len(parts) == 2:
-        file_id = parts[1]
-        try:
-            bot.send_video(message.chat.id, file_id)
-        except:
-            try:
-                bot.send_document(message.chat.id, file_id)
-            except:
-                bot.send_message(message.chat.id, "⚠️ Invalid File ID or File Type not supported.")
-    else:
-        bot.send_message(message.chat.id, "❗ Usage:\n/get <file_id>")
+@app.route('/' + BOT_TOKEN, methods=['POST'])
+def receive_update():
+    bot.process_new_updates([telebot.types.Update.de_json(request.stream.read().decode("utf-8"))])
+    return "!", 200
 
-bot.infinity_polling()
+@app.route('/')
+def set_webhook():
+    bot.remove_webhook()
+    bot.set_webhook(url="https://YOUR_RENDER_SERVICE_URL/" + BOT_TOKEN)
+    return "Webhook set ✅", 200
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)
